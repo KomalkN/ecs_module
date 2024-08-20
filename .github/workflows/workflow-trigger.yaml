@@ -1,0 +1,40 @@
+name: Trigger Workflow
+
+# Triggering the workflow on a workflow_call event
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git Ref
+        required: true
+        type: string
+      workflow:
+        description: 'Workflow name'
+        required: true
+        type: string
+      inputs:
+        description: 'Workflow inputs'
+        required: true
+        type: string
+    secrets:
+      GH_INFRA_PAT:
+        required: true
+
+jobs:
+  # Job to dispatch a workflow based on inputs
+  dispatch:
+    runs-on: ubuntu-latest
+    name: "Dispatch (${{ inputs.workflow }})"
+    steps:
+      # Dispatch the specified workflow with provided inputs and on the specified Git Ref
+      - name: Dispatch workflow
+        uses: octokit/request-action@v2.x
+        with:
+          route: POST /repos/${{ github.repository }}/actions/workflows/:workflow/dispatches
+          mediaType: |
+            format: application/vnd.github.v3+json
+          workflow: ${{ inputs.workflow }}.yaml
+          inputs: ${{ inputs.inputs }}
+          ref: ${{ github.ref }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_INFRA_PAT }}

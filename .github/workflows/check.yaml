@@ -1,0 +1,16 @@
+name: Check
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read
+on:
+  pull_request:
+    # On any pull requests to $default-branch
+    branches: ['main']
+jobs:
+  terraform:
+    name: "Terraform"
+    uses: KomalkN/eks/.github/workflows/terraform-check.yaml@main
+    secrets:
+      GH_INFRA_PAT: ${{ secrets.GH_INFRA_PAT }}
+      AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+      AWS_SESSION_NAME: ${{ secrets.AWS_SESSION_NAME }}

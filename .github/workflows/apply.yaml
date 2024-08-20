@@ -1,1 +1,40 @@
-foo=foo
+name: Apply
+permissions:
+    id-token: write # This is required for requesting the JWT
+    contents: read
+
+# Triggering the workflow on repository_dispatch and workflow_dispatch events
+on:
+  repository_dispatch:
+    types: [terraform-apply]
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'Target environment'
+        default: dev
+        required: true
+        type: choice
+        options:
+          - stage
+          - dev
+          - prod
+      ref:
+        description: Git Ref (Default to workflow branch)
+        required: false
+
+# Jobs to be executed in the workflow
+jobs:
+   terraform:
+    name: "Terraform"
+    uses: KomalkN/eks/.github/workflows/terraform-apply.yaml@main
+    
+    # Input parameters for the job
+    with:
+      ref: ${{ github.event.inputs.ref }} # Using the Git reference from the workflow input
+      env: ${{ github.event.inputs.env }} # Using the environment from the workflow input
+    
+    # Secrets needed for the job (GH_INFRA_PAT and GCP_SVC_CREDS)
+    secrets:
+      GH_INFRA_PAT: ${{ secrets.GH_INFRA_PAT }}
+      AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+      AWS_SESSION_NAME: ${{ secrets.AWS_SESSION_NAME }}

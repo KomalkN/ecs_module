@@ -1,0 +1,122 @@
+name: Terraform Apply
+
+# Triggering the workflow on a workflow_call event
+on:
+  workflow_call:
+    inputs:
+      env:
+        description: 'stage | dev | prod'
+        default: 'dev'
+        required: false
+        type: string
+      ref:
+        description: Git Ref (Default to workflow branch)
+        required: false
+        type: string
+        default: ''
+    secrets:
+      GH_INFRA_PAT:
+        required: true
+      AWS_ROLE_TO_ASSUME:
+        required: true
+      AWS_SESSION_NAME:
+        required: true
+
+jobs:
+  # Job to Plan Terraform Changes
+  Plan:
+    name: "Plan (${{ github.event.inputs.env }})"
+    runs-on: ubuntu-latest
+    concurrency: terraform-${{ inputs.env }}
+    environment: ${{ inputs.env }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_INFRA_PAT }}
+    steps:
+      # Check out the project repository
+      - name: Checkout Project
+        uses: actions/checkout@v4    
+      - name: Configure git override
+        run: |
+          git config --global url."https://oauth2:${{ secrets.GH_INFRA_PAT }}@github.com".insteadOf ssh://git@github.com
+      # Configure AWS Creds
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: ${{ secrets.AWS_SESSION_NAME }}
+          aws-region: us-east-2
+      # Install Terraform CLI
+      - name: Terraform install
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.2"
+      # Install Mozilla Sops Binary
+      - name: Sops Binary Installer
+        uses: mdgreenwald/mozilla-sops-action@v1.4.1
+        with:
+          version: 'v3.7.3' # default is latest stable
+        id: install
+      # Initialize Terraform workspace
+      - name: Terraform init
+        run: make ENV=${{ inputs.env }} terraform/init
+      # Generate Terraform execution plan and save it to terraform.plan file
+      - name: Terraform plan
+        run: make ENV=${{ inputs.env }} TF_CMD_ARGS='-out=terraform.plan' terraform/plan
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_INFRA_PAT }}
+      # Upload terraform plan artifact
+      - name: Save terraform plan
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform.plan
+          path: infra/terraform/terraform.plan    
+
+  # Job to Apply Terraform Changes
+  Apply:
+    needs: [Plan]
+    name: "Apply (${{ inputs.env }})"
+    runs-on: ubuntu-latest
+    concurrency: terraform-${{ inputs.env }}
+    environment: ${{ inputs.env }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_INFRA_PAT }}
+    steps:
+      # Check out the project repository
+      - name: Checkout Project
+        uses: actions/checkout@v4
+      - name: Configure git override
+        run: |
+          git config --global url."https://oauth2:${{ secrets.GH_INFRA_PAT }}@github.com".insteadOf ssh://git@github.com
+      # Configure AWS Creds
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: ${{ secrets.AWS_SESSION_NAME }}
+          aws-region: us-east-2
+      # Install Terraform CLI
+      - name: Terraform install
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.2"
+      # Install Mozilla Sops Binary
+      - name: Sops Binary Installer
+        uses: mdgreenwald/mozilla-sops-action@v1.4.1
+        with:
+          version: 'v3.7.3' # default is latest stable
+        id: install
+      # Download terraform plan artifact
+      - name: Restore terraform plan
+        uses: actions/download-artifact@v2
+        with:
+          name: terraform.plan
+          path: infra/terraform
+      # Initialize Terraform workspace
+      - name: Terraform init
+        run: make ENV=${{ inputs.env }} terraform/init
+      # Apply Terraform changes using the saved execution plan
+      - name: Terraform Apply
+        run: |
+          make ENV=${{ inputs.env }} TF_CMD_ARGS='-auto-approve terraform.plan' terraform/apply
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_INFRA_PAT }}

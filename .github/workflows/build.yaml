@@ -1,0 +1,35 @@
+name: Build
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read
+# Triggering the workflow on a push event to the 'develop' branch
+on:
+  push:
+    branches: ['main']
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - stage
+          - dev
+          - prod
+
+# Jobs to be executed in the workflow
+jobs:
+  terraform-apply:
+    name: "Terraform apply"
+    uses: KomalkN/eks/.github/workflows/workflow-trigger.yaml@main
+    # Input parameters for the job
+    with:
+      workflow: apply # Triggering the 'apply' workflow
+      ref: ${{ github.ref }} # Using the Git reference from the push event
+      inputs: |
+        env: ${{ github.event.inputs.env }} # Using the environment from the push event
+        ref: ${{ github.sha }} # Using the Git SHA from the push event
+    
+    # Secrets needed for the job (GH_INFRA_PAT)
+    secrets:
+      GH_INFRA_PAT: ${{ secrets.GH_INFRA_PAT }}

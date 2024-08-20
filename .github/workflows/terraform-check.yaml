@@ -1,0 +1,93 @@
+name: Terraform check
+
+# Triggering the workflow on a workflow_call event
+on:
+  workflow_call:
+    inputs:
+      default_env:
+        type: string
+        required: false
+        default: dev
+        description: Default env name
+    secrets:
+      GH_INFRA_PAT:
+        required: true
+      AWS_ROLE_TO_ASSUME:
+        required: true
+      AWS_SESSION_NAME:
+        required: true
+jobs:
+# Job to Validate Terraform Configuration
+  validate:
+    name: "Validate"
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.default_env }}
+    steps:
+      # Check out the project repository          
+      - name: Checkout Project
+        uses: actions/checkout@v4
+      - name: Configure git override
+        run: |
+          git config --global url."https://oauth2:${{ secrets.GH_INFRA_PAT }}@github.com".insteadOf ssh://git@github.com
+      
+      # Configure AWS Creds
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: ${{ secrets.AWS_SESSION_NAME }}
+          aws-region: us-east-1
+      # Install Mozilla Sops Binary
+      - name: Sops Binary Installer
+        uses: mdgreenwald/mozilla-sops-action@v1.4.1
+        with:
+          version: 'v3.7.3' # default is latest stable
+        id: install
+      # Initialize Terraform workspace
+      - name: Terraform init
+        run: make ENV=${{ inputs.default_env }} terraform/init
+      # Validate Terraform configuration
+      - name: Terraform validate
+        run: make ENV=${{ inputs.default_env }} terraform/validate
+  plan:
+    name: "Plan"
+    needs: [validate]
+    runs-on: ubuntu-latest
+    concurrency: terraform-${{ matrix.env }}
+    environment: ${{ matrix.env }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_INFRA_PAT }}
+    strategy:
+      fail-fast: false
+      matrix:
+          env:
+          - stage
+          - dev
+          - prod
+    steps:
+      # Check out the project repository
+      - name: Checkout Project
+        uses: actions/checkout@v3
+      
+      - name: Configure git override
+        run: |
+          git config --global url."https://oauth2:${{ secrets.GH_INFRA_PAT }}@github.com".insteadOf ssh://git@github.com
+      # Configure AWS Creds
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: ${{ secrets.AWS_SESSION_NAME }}
+          aws-region: us-east-2
+      # Install Mozilla Sops Binary
+      - name: Sops Binary Installer
+        uses: mdgreenwald/mozilla-sops-action@v1.4.1
+        with:
+          version: 'v3.7.3' # default is latest stable
+        id: install
+      # Initialize Terraform workspace
+      - name: Terraform init
+        run: make ENV=${{ matrix.env }} terraform/init
+      # Generate Terraform execution plan with locking disabled 
+      - name: Terraform plan
+        run: make ENV=${{ matrix.env }} TF_CMD_ARGS='-lock=false' terraform/plan
