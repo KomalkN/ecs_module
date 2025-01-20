@@ -1,0 +1,37 @@
+# vpc variable values
+vpc_cidr_block: "10.0.0.0/16"
+domain_name: "ec2.internal"
+domain_name_servers: ["AmazonProvidedDNS"]
+
+# public subnet variable values
+public_subnet_conf:
+  public_subnet_1:
+    name: "public-subnet-1"
+    cidr_block: "10.0.1.0/24"
+    availability_zone: "us-east-1a"
+  public_subnet_2:
+    name: "public-subnet-2"
+    cidr_block: "10.0.2.0/24"
+    availability_zone: "us-east-1b"
+  public_subnet_3:
+    name: "public-subnet-3"
+    cidr_block: "10.0.3.0/24"
+    availability_zone: "us-east-1c"
+
+# private subnet variable values
+private_subnet_conf:
+  private_subnet_1:
+    name: "private-subnet-1"
+    cidr_block: "10.0.4.0/24"
+    availability_zone: "us-east-1a"
+  private_subnet_2:
+    name: "private-subnet-2"
+    cidr_block: "10.0.5.0/24"
+    availability_zone: "us-east-1b"
+  private_subnet_3:
+    name: "private-subnet-3"
+    cidr_block: "10.0.6.0/24"
+    availability_zone: "us-east-1c"
+
+
+    

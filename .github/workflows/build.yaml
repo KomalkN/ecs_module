@@ -5,7 +5,7 @@ permissions:
 # Triggering the workflow on a push event to the 'develop' branch
 on:
   push:
-    branches: ['main']
+    branches: ['mainn']
   workflow_dispatch:
     inputs:
       env:
@@ -21,7 +21,7 @@ on:
 jobs:
   terraform-apply:
     name: "Terraform apply"
-    uses: KomalkN/eks/.github/workflows/workflow-trigger.yaml@main
+    uses: KomalkN/ecs_module/.github/workflows/workflow-trigger.yaml@main
     # Input parameters for the job
     with:
       workflow: apply # Triggering the 'apply' workflow

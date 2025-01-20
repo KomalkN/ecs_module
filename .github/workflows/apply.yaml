@@ -26,7 +26,7 @@ on:
 jobs:
    terraform:
     name: "Terraform"
-    uses: KomalkN/eks/.github/workflows/terraform-apply.yaml@main
+    uses: KomalkN/ecs_module/.github/workflows/terraform-apply.yaml@main
     
     # Input parameters for the job
     with:

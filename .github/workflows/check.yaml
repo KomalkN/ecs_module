@@ -5,11 +5,11 @@ permissions:
 on:
   pull_request:
     # On any pull requests to $default-branch
-    branches: ['main']
+    branches: ['mainn']
 jobs:
   terraform:
     name: "Terraform"
-    uses: KomalkN/eks/.github/workflows/terraform-check.yaml@main
+    uses: KomalkN/ecs_module/.github/workflows/terraform-check.yaml@main
     secrets:
       GH_INFRA_PAT: ${{ secrets.GH_INFRA_PAT }}
       AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}

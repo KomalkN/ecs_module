@@ -1,3 +1,3 @@
-    bucket = "tf-bucket-demo-1"
+    bucket = "newlife-bucket"
     key    = "terraform.tfstate"
-    region = "us-east-2"
+    region = "us-east-1"
